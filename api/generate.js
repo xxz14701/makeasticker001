@@ -61,8 +61,23 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { promptText, image, model } = req.body;
+        let requestBody = req.body;
+
+        // 【新增的防禦性解析】
+        // 如果 req.body 是字串（可能是因為代理解析失敗而傳入 "[object Object]" 或原始 JSON 字串），嘗試手動解析。
+        if (typeof req.body === 'string' && req.body.length > 0) {
+            try {
+                requestBody = JSON.parse(req.body);
+            } catch (parseError) {
+                console.warn("手動解析請求主體失敗，可能是無效的 JSON 格式:", parseError.message);
+                // 如果解析失敗，則讓後續的檢查來處理無效的內容
+                requestBody = {}; 
+            }
+        }
         
+        // 從 (已解析的) requestBody 中解構變數
+        const { promptText, image, model } = requestBody;
+
         if (!promptText || !image || !image.data || !image.mimeType || !model) {
             return res.status(400).json({ error: "缺少必要的請求參數 (promptText, image.data, image.mimeType, 或 model)。" });
         }
